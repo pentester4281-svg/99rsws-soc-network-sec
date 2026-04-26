@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #certificate-render, #certificate-render * {
+    visibility: visible;
+  }
+  #certificate-render {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 70.7vw; /* A4 aspect ratio */
+    margin: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+  }
+}
