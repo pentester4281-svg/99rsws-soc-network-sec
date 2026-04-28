@@ -36,7 +36,8 @@ import {
   RefreshCcw,
   Monitor,
   Skull,
-  ExternalLink
+  ExternalLink,
+  BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -109,82 +110,80 @@ const LAB_TASKS: LabTask[] = [
     difficulty: 'Easy',
     reward: 'Access Baseline',
     instructions: [
-      'Open the VICTIM SYSTEM (preferably in a new tab).',
+      'Open the VICTIM SYSTEM tab.',
       'Login with Username: admin | Password: password123',
-      'Verify you see "Login Successful".'
+      'Check logic: SIEM-la successful record aagudha-nu paru.'
     ],
     validation: (state) => state.logs.some(l => l.action === 'LOGIN_SUCCESS' && l.sourceIp === USER_IP),
-    hint: 'Open the "Victim System" and use the provided credentials.'
+    hint: 'Go to Victim tab and use admin/password123.'
   },
   {
-    id: 'observe-logs',
-    title: 'SIEM Log Observation',
-    description: 'Verify that your login event was recorded in the SOC Dashboard.',
+    id: 'recon-scan',
+    title: 'Network Reconnaissance',
+    description: 'Identify the target server and open ports using Nmap.',
     difficulty: 'Easy',
-    reward: 'Log Analyst',
+    reward: 'Recon Specialist',
     instructions: [
-      'Navigate to SOC DASHBOARD.',
-      'Locate the LOGIN_SUCCESS entry from your IP (45.122.1.22).',
-      'Enter the Source IP recorded for this login.'
+      'Open ATTACKER CONSOLE tab.',
+      'Type panni scan pannu: nmap -sV 192.168.1.45',
+      'Wait for the results to show Port 80 (HTTP) is OPEN.'
     ],
-    validation: (_, ans) => ans.trim() === USER_IP,
-    hint: 'Check the Log Console in the Dashboard. The IP you used to login should be there.'
+    validation: (state) => state.logs.some(l => l.action === 'RECON_SCAN'),
+    hint: 'Type "nmap -sV 192.168.1.45" in the attacker terminal.'
   },
   {
     id: 'start-attack',
-    title: 'Initiate Brute-Force',
-    description: 'Exploit the Victim system from the Attacker Console.',
-    difficulty: 'Easy',
-    reward: 'Script Kiddie',
+    title: 'Manual Brute-Force (Hydra)',
+    description: 'Use the Hydra tool to crack the admin password.',
+    difficulty: 'Medium',
+    reward: 'Password Cracker',
     instructions: [
-      'Open the ATTACKER CONSOLE (preferably in a new tab).',
-      'Click on "START BRUTE-FORCE SCRIPT".',
-      'Verify the script is running in the terminal.'
+      'Attacker terminal-la hydra command execute pannu:',
+      'hydra -l admin -P passlist.txt 192.168.1.45'
     ],
     validation: (state) => state.isAttacking,
-    hint: 'Go to the "Attacker Console" and initiate the automated script.'
+    hint: 'Type "hydra -l admin -P passlist.txt 192.168.1.45" to start the attack.'
   },
   {
     id: 'detect-pattern',
-    title: 'Identify Abnormal Pattern',
-    description: 'Spot the automated attack in the SOC Dashboard.',
+    title: 'Identify Attacker IP',
+    description: 'Catch the automated attack in the SOC Dashboard.',
     difficulty: 'Medium',
     reward: 'Pattern Recon',
     instructions: [
-      'Monitor the SOC logs.',
-      'Find the recurring LOGIN_FAILURE attempts.',
-      'Identify and enter the Attacker\'s Source IP.'
+      'SOC Dashboard logs-ah monitor pannu.',
+      'LOGIN_FAILURE rapid-ah varum.',
+      'Attacker-oda Source IP-ah kandu pudichi input pannu.'
     ],
     validation: (_, ans) => ans.trim() === ATTACKER_IP,
-    hint: 'Look for the external IP that is generating rapid failed login attempts.'
+    hint: 'Look for the external IP 103.45.21.9 causing the failures.'
   },
   {
     id: 'detect-alert',
-    title: 'Security Alert Trigger',
-    description: 'The SOC system should have triggered an automated alert.',
+    title: 'Security Alert Triage',
+    description: 'Detect the high-severity alert triggered by SIEM.',
     difficulty: 'Medium',
     reward: 'Alert Responder',
     instructions: [
-      'Check the Simulation Status in the top header.',
-      'Wait for the Alert Level to reach "BREACH" or "HIGH".',
-      'Submit the word "BREACH" when you see it.'
+      'Threat Status-ah check pannu.',
+      'Alert Level "BREACH" aagura varai wait pannu.',
+      'Verification keyword "CRITICAL_BREACH" submit pannu.'
     ],
-    validation: (state, ans) => state.alertLevel === 'breach' || ans.toUpperCase() === 'BREACH',
-    hint: 'The failed attempts will eventually trigger the security threshold.'
+    validation: (state, ans) => state.alertLevel === 'breach' || ans.toUpperCase() === 'CRITICAL_BREACH',
+    hint: 'Wait for the header to turn red and pulsate "BREACH".'
   },
   {
     id: 'containment',
-    title: 'Block and Verify',
-    description: 'Contain the threat by blocking the malicious IP.',
+    title: 'Incident Containment',
+    description: 'Block the IP to stop the attack flow.',
     difficulty: 'Medium',
     reward: 'Incident Commander',
     instructions: [
-      'In the SOC Dashboard, find the "Defense Actions" panel.',
-      'Input the Attacker IP (' + ATTACKER_IP + ') and click Block.',
-      'Verify the logs stop appearing and system status resets.'
+      'Defense Actions panel-la Attacker IP (103.45.21.9) block pannu.',
+      'Verify: Logs nikudha nu check pannu.'
     ],
     validation: (state) => state.blockedIps.includes(ATTACKER_IP),
-    hint: 'Block the IP you identified in Task 4. Once blocked, the attacker script will automatically stop.'
+    hint: 'Block 103.45.21.9 in the SOC dashboard.'
   }
 ];
 
@@ -236,6 +235,9 @@ const TaskCard = ({ task, isActive, isCompleted, onSelect, index }: TaskCardProp
 
 // --- State Provider Hook ---
 const useSimulation = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => !!localStorage.getItem('ev_lab_auth'));
+  const [studentName, setStudentName] = useState(() => localStorage.getItem('ev_student_name') || '');
+  
   const [state, setState] = useState<SimulationState>(() => {
     const saved = localStorage.getItem('ev_cyber_lab_state');
     return saved ? JSON.parse(saved) : {
@@ -248,11 +250,25 @@ const useSimulation = () => {
     };
   });
 
+  const login = (name: string) => {
+    localStorage.setItem('ev_lab_auth', 'true');
+    localStorage.setItem('ev_student_name', name);
+    setStudentName(name);
+    setIsAuthenticated(true);
+    broadcast.postMessage({ type: 'AUTH_SYNC', name });
+  };
+
+  const logout = () => {
+    localStorage.removeItem('ev_lab_auth');
+    localStorage.removeItem('ev_student_name');
+    setIsAuthenticated(false);
+    setStudentName('');
+  };
+
   const updateState = useCallback((partial: Partial<SimulationState>) => {
     setState(prev => {
       const newState = { ...prev, ...partial };
-      
-      // Enforce Derived State
+      // ... (existing derived state logic)
       const failed = newState.logs.filter(l => l.action === 'LOGIN_FAILURE').length;
       newState.failedAttempts = failed;
       if (failed > 15) newState.alertLevel = 'breach';
@@ -260,26 +276,32 @@ const useSimulation = () => {
       else if (failed > 0) newState.alertLevel = 'low';
       else newState.alertLevel = 'normal';
 
-      // Auto-stop attack if blocked
       if (newState.blockedIps.includes(ATTACKER_IP)) {
         newState.isAttacking = false;
       }
 
       localStorage.setItem('ev_cyber_lab_state', JSON.stringify(newState));
-      broadcast.postMessage(newState);
+      broadcast.postMessage({ type: 'STATE_SYNC', state: newState });
       return newState;
     });
   }, []);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      setState(event.data);
+      if (event.data.type === 'STATE_SYNC') setState(event.data.state);
+      if (event.data.type === 'AUTH_SYNC') {
+        setIsAuthenticated(true);
+        setStudentName(event.data.name);
+      }
     };
     broadcast.addEventListener('message', handleMessage);
     
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'ev_cyber_lab_state' && e.newValue) {
         setState(JSON.parse(e.newValue));
+      }
+      if (e.key === 'ev_lab_auth') {
+        setIsAuthenticated(!!e.newValue);
       }
     };
     window.addEventListener('storage', handleStorage);
@@ -311,7 +333,7 @@ const useSimulation = () => {
       else newState.alertLevel = 'normal';
 
       localStorage.setItem('ev_cyber_lab_state', JSON.stringify(newState));
-      broadcast.postMessage(newState);
+      broadcast.postMessage({ type: 'STATE_SYNC', state: newState });
       return newState;
     });
   }, []);
@@ -327,10 +349,100 @@ const useSimulation = () => {
     };
     setState(defaultState);
     localStorage.setItem('ev_cyber_lab_state', JSON.stringify(defaultState));
-    broadcast.postMessage(defaultState);
+    broadcast.postMessage({ type: 'STATE_SYNC', state: defaultState });
   }, []);
 
-  return { state, updateState, addLog, reset };
+  return { state, updateState, addLog, reset, isAuthenticated, studentName, login, logout };
+};
+
+// --- Access Gate Component ---
+const AccessGate = ({ onLogin }: { onLogin: (name: string) => void }) => {
+  const [name, setName] = useState('');
+  const [pass, setPass] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Please enter your name, student.");
+      return;
+    }
+    if (pass === 'EVSOCV1LAB') {
+      onLogin(name);
+    } else {
+      setError("Invalid Lab Access Password. Critical Failure.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[200] bg-slate-950 flex items-center justify-center p-6 font-sans">
+      <div className="absolute inset-0 opacity-[0.05] pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full terminal-scanlines opacity-50" />
+      </div>
+      
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-[3rem] p-12 shadow-2xl relative z-10"
+      >
+        <div className="flex flex-col items-center mb-10">
+          <div className="w-20 h-20 bg-indigo-600 rounded-3xl flex items-center justify-center mb-6 shadow-2xl shadow-indigo-600/20">
+            <Lock className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-sm font-black text-indigo-400 uppercase tracking-[0.4em] mb-2">EV CYBER ACADEMY</h2>
+          <h1 className="text-2xl font-black text-white uppercase tracking-tighter">LAB ENTRY PORTAL</h1>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Student Identifier</label>
+            <div className="relative">
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input 
+                type="text" 
+                placeholder="Ex: John Doe" 
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-2xl pl-12 pr-6 py-4 text-sm font-semibold outline-none focus:border-indigo-500 transition-all text-white"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] ml-1">Lab Access Password</label>
+            <div className="relative">
+              <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input 
+                type="password" 
+                placeholder="••••••••" 
+                value={pass}
+                onChange={e => setPass(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-700 rounded-2xl pl-12 pr-6 py-4 text-sm font-semibold outline-none focus:border-indigo-500 transition-all text-white"
+              />
+            </div>
+          </div>
+
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }} 
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-rose-500/10 border border-rose-500/20 text-rose-500 text-[10px] font-black uppercase p-3 rounded-xl text-center"
+            >
+              {error}
+            </motion.div>
+          )}
+
+          <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-600/20 active:scale-95 transition-all uppercase tracking-widest text-xs">
+            Unlock Simulation
+          </button>
+        </form>
+
+        <p className="mt-8 text-center text-[9px] text-slate-600 font-bold uppercase tracking-widest leading-relaxed">
+          Authorized personnel only. <br /> Unauthorized access is strictly logged by the SOC server.
+        </p>
+      </motion.div>
+    </div>
+  );
 };
 
 // --- View Components ---
@@ -571,114 +683,253 @@ const VictimView = ({ addLog }: any) => {
 };
 
 const AttackerView = ({ state, updateState, addLog }: any) => {
-  const [terminal, setTerminal] = useState<string[]>(['Kali GNU/Linux Rolling 2024.1', 'root@kali:~# msfconsole -q', 'msf6 > ready for payload injection...']);
+  const [terminal, setTerminal] = useState<string[]>([
+    'Kali GNU/Linux Rolling 2024.1', 
+    'root@kali:~# msfconsole -q', 
+    'msf6 > welcome back, operator.',
+    'msf6 > type "help" for a list of available manual exploits.',
+    'msf6 > training module: "Network Breach v1.2" loaded.'
+  ]);
+  const [cmd, setCmd] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [terminal]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (state.isAttacking && !state.blockedIps.includes(ATTACKER_IP)) {
       interval = setInterval(() => {
-        const password = ['12345', 'admin', 'god', 'qwerty', 'root'][Math.floor(Math.random() * 5)];
-        addLog(ATTACKER_IP, 'LOGIN_FAILURE', `Attempted credentials: admin / ${password}`, 'warning');
-        setTerminal(prev => [...prev, `[FAIL] Credential Spray: admin:${password} to ${VICTIM_IP}`].slice(-15));
-      }, 900);
+        const passwords = ['12345', 'admin', 'god', 'qwerty', 'root', 'kali', 'security', 'password', '654321', 'welcome'];
+        const password = passwords[Math.floor(Math.random() * passwords.length)];
+        addLog(ATTACKER_IP, 'LOGIN_FAILURE', `Hydra brute-force: admin / ${password}`, 'warning');
+        setTerminal(prev => [...prev, `[FAIL] Hydra attempt [${Math.floor(Math.random() * 1000)}]: user:admin  pass:${password}  target:${VICTIM_IP}`].slice(-30));
+      }, 800);
     }
     return () => clearInterval(interval);
   }, [state.isAttacking, state.blockedIps, addLog]);
+
+  const handleCommand = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cmd.trim()) return;
+
+    const input = cmd.toLowerCase().trim();
+    const newLogs = [...terminal, `<span class="text-indigo-400 font-bold">root@kali</span>:<span class="text-white">~#</span> ${cmd}`];
+    setCmd('');
+
+    if (state.blockedIps.includes(ATTACKER_IP)) {
+      setTerminal([...newLogs, '<span class="text-rose-500 font-bold">[!] ERROR: Network connection reset by peer. (SIEM_FIREWALL_ACTIVE)</span>', '<span class="text-rose-400 italic">Target 192.168.1.45 has blacklisted our ingress point. Kill chain broken.</span>']);
+      return;
+    }
+
+    if (input.startsWith('nmap')) {
+      if (input.includes('192.168.1.45')) {
+        setTerminal([...newLogs, 
+          '[*] Starting Nmap 7.94 ( https://nmap.org ) at ' + new Date().toLocaleTimeString(),
+          'Nmap scan report for 192.168.1.45',
+          'Host is up (0.005s latency).',
+          'PORT   STATE SERVICE VERSION',
+          '80/tcp open  http    Apache 2.4.41',
+          '|_http-server-header: Apache/2.4.41 (Ubuntu)',
+          '|_http-title: EV CORP - Internal Portal',
+          '[+] Scan complete. Vulnerable entry point found on Port 80.'
+        ]);
+        addLog(ATTACKER_IP, 'RECON_SCAN', 'Syn-Scan identifying Port 80/tcp as OPEN', 'info');
+      } else {
+        setTerminal([...newLogs, '[-] usage: nmap -sV [target_ip]', 'Hint: Try scanning the target 192.168.1.45']);
+      }
+    } else if (input.startsWith('hydra')) {
+      if (input.includes('192.168.1.45')) {
+        updateState({ isAttacking: true });
+        setTerminal([...newLogs, 
+          '[+] Hydra v9.5 (c) 2024 by van Hauser',
+          '[*] Dictionary attack started on: 192.168.1.45',
+          '[*] Protocol: HTTP-POST-FORM | User: admin | Passlist: /root/tools/passlist.txt',
+          '[+] [ATTACK_SEQUENCE_INITIALIZED] - Monitoring output strings...'
+        ]);
+      } else {
+        setTerminal([...newLogs, '[-] hydra: Target system not found. Command structure incorrect.']);
+      }
+    } else if (input === 'ls') {
+      setTerminal([...newLogs, 'exploit.sh  nmap_results.txt  <span class="text-indigo-400 font-bold">passlist.txt</span>  payloads/']);
+    } else if (input === 'cat passlist.txt') {
+      setTerminal([...newLogs, '12345', 'admin', 'password', 'god', 'qwerty', '12345678', 'root', 'kali', 'security', 'welcome', '...[truncated for privacy]']);
+    } else if (input === 'whoami') {
+      setTerminal([...newLogs, 'root (Superuser Access)']);
+    } else if (input === 'ifconfig' || input === 'ip a') {
+      setTerminal([...newLogs, 
+        'eth0: flags=4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu 1500',
+        '        inet ' + ATTACKER_IP + '  netmask 255.255.255.0  broadcast 103.45.21.255',
+        '        ether 00:0c:29:4f:a1:03  txqueuelen 1000  (Ethernet)'
+      ]);
+    } else if (input === 'clear') {
+      setTerminal(['<span class="text-slate-500 italic">Terminal session refreshed. root@kali ready.</span>']);
+    } else if (input === 'help') {
+      setTerminal([...newLogs, 
+        '<span class="text-amber-400 font-bold underline">AVAILABLE OFFENSIVE TOOLS:</span>',
+        ' <span class="text-indigo-300">nmap -sV 192.168.1.45</span>      : Info gathering (Recon)',
+        ' <span class="text-indigo-300">hydra -l admin -P ...</span>     : Brute-force credentials',
+        ' <span class="text-indigo-300">whoami</span>                      : Check local identity',
+        ' <span class="text-indigo-300">ifconfig</span>                    : Network configuration',
+        ' <span class="text-indigo-300">ls / cat</span>                    : File system navigation',
+        ' <span class="text-indigo-300">clear</span>                       : Wipe terminal screen',
+        ' <span class="text-slate-400 font-bold mt-2 block">WORKSHOP TIP (Thanglish):</span>',
+        ' Target IP-ah (192.168.1.45) use panni exploitation sequence-ah start pannu da.'
+      ]);
+    } else if (input === 'kill' || input.includes('stop')) {
+      updateState({ isAttacking: false });
+      setTerminal([...newLogs, '[*] Terminating active exploit processes...', '[*] Process 8842 killed. Session clean.']);
+    } else {
+      setTerminal([...newLogs, `<span class="text-rose-500">zsh: command not found: ${cmd}</span>`, 'Type "help" to see available kali tools.']);
+    }
+  };
 
   return (
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="h-full flex flex-col p-8 bg-slate-950"
+      className="h-full flex flex-col p-6 bg-[#050505] font-mono selection:bg-indigo-500/40"
     >
-      <div className="bg-[#0c0c0c] rounded-3xl border border-white/5 flex-1 shadow-2xl flex flex-col relative overflow-hidden ring-1 ring-white/10">
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#f43f5e 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+      <div className="flex-1 flex flex-col min-h-0 bg-[#0c0c0c] rounded-2xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden ring-1 ring-white/5 relative group">
         
         {/* Terminal Title Bar */}
-        <div className="bg-[#1e1e1e] px-6 py-3 border-b border-white/5 flex items-center justify-between">
+        <div className="bg-[#1a1a1a] px-5 py-3 border-b border-white/10 flex items-center justify-between shrink-0 select-none">
           <div className="flex items-center gap-4">
-             <div className="flex gap-2">
-               <div className="w-3 h-3 rounded-full bg-rose-500/80 shadow-[0_0_8px_rgba(244,63,94,0.3)]" />
-               <div className="w-3 h-3 rounded-full bg-amber-500/80 shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
-               <div className="w-3 h-3 rounded-full bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+             <div className="flex gap-1.5">
+               <div className="w-3 h-3 rounded-full bg-rose-500/80 shadow-[0_0_8px_rgba(244,63,94,0.3)] cursor-pointer hover:bg-rose-400" />
+               <div className="w-3 h-3 rounded-full bg-amber-500/80 shadow-[0_0_8px_rgba(245,158,11,0.3)] cursor-pointer hover:bg-amber-400" />
+               <div className="w-3 h-3 rounded-full bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.3)] cursor-pointer hover:bg-emerald-400" />
              </div>
-             <div className="h-4 w-px bg-white/10 mx-2" />
+             <div className="h-4 w-px bg-white/10 mx-1" />
              <div className="flex items-center gap-2">
-               <Skull className="w-3.5 h-3.5 text-rose-500" />
-               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">root@kali: ~</span>
+               <Skull className="w-3.5 h-3.5 text-slate-500" />
+               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Kali v2024.1 - 103.45.21.9</span>
              </div>
           </div>
-          <div className="flex gap-4">
-             <div className="flex items-center gap-2">
-               <div className={cn("w-1.5 h-1.5 rounded-full", state.isAttacking ? "bg-rose-500 animate-pulse" : "bg-slate-600")} />
-               <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-mono">ATTACK_MODE: {state.isAttacking ? 'SPOOFING' : 'IDLE'}</span>
-             </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+               <Activity className={cn("w-3 h-3", state.isAttacking ? "text-emerald-500 animate-pulse" : "text-slate-600")} />
+               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">CPU: 42%</span>
+            </div>
+            <div className="flex items-center gap-2">
+               <div className={cn("w-1.5 h-1.5 rounded-full", state.isAttacking ? "bg-emerald-500" : "bg-slate-600")} />
+               <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{state.isAttacking ? 'RUNNING' : 'IDLE'}</span>
+            </div>
           </div>
         </div>
 
-        {/* Action Bar */}
-        <div className="p-8 flex items-center justify-between bg-[#141414]/90 border-b border-white/5">
+        {/* Action / Context Bar */}
+        <div className="px-8 py-5 flex items-center justify-between bg-[#111] border-b border-white/5 shrink-0">
           <div className="flex flex-col">
-            <h2 className="text-xl font-black text-white uppercase tracking-tighter">NetExploit Framework v4.2</h2>
-            <p className="text-[10px] font-bold text-rose-500 font-mono tracking-widest mt-1">SPOOFED_IP: {ATTACKER_IP}</p>
+            <h2 className="text-lg font-black text-white uppercase tracking-tighter terminal-glow">Offensive Security Framework</h2>
+            <div className="flex items-center gap-3 mt-0.5">
+              <p className="text-[9px] font-bold text-rose-500/80 font-mono tracking-[0.2em]">SPOOFED_GATEWAY: 103.45.21.1</p>
+              <div className="w-1 h-1 rounded-full bg-slate-700" />
+              <p className="text-[9px] font-bold text-slate-500 font-mono tracking-[0.2em]">TARGET_ASSET: 192.168.1.45</p>
+            </div>
           </div>
-          <div className="flex gap-3">
-            <button 
-            onClick={() => {
-              if (state.blockedIps.includes(ATTACKER_IP)) {
-                setTerminal(prev => [...prev, 'root@kali:~# error: connection_denied', '[-] Target SIEM has blocked our ingress.']);
-                return;
-              }
-              updateState({ isAttacking: true });
-              setTerminal(prev => [...prev, 'root@kali:~# ./exploit.sh --target 192.168.1.45', '[+] Starting login_spray module...', '[+] Payload loaded: common_pass.txt']);
-            }}
-            className="bg-rose-600 hover:bg-rose-500 text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-600/20 active:scale-95 transition-all"
-            >
-              Start Exploit
-            </button>
-            <button 
-            onClick={() => {
-              updateState({ isAttacking: false });
-              setTerminal(prev => [...prev, 'root@kali:~# killall netexploit', '[*] Exploit process killed.']);
-            }}
-            className="bg-white/5 hover:bg-white/10 text-slate-400 px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
-            >
-              Kill Process
-            </button>
+          <div className="flex gap-2">
+            <div className="text-[9px] font-black text-indigo-400/50 uppercase border border-indigo-500/20 px-3 py-1.5 rounded bg-indigo-500/5">
+              Workshop Exclusive v1.2
+            </div>
           </div>
         </div>
 
-        {/* Terminal Output */}
-        <div className="flex-1 bg-black p-8 font-mono text-sm overflow-auto custom-scrollbar selection:bg-rose-500/30">
-           {terminal.map((line, i) => (
-             <div key={i} className={cn(
-               "mb-1.5", 
-               line.startsWith('root@kali') ? 'text-indigo-400 font-bold' : 
-               line.includes('[FAIL]') ? 'text-rose-500/80' : 
-               line.includes('[+]') ? 'text-emerald-500/80' :
-               'text-slate-300'
-             )}>
-               <span className="opacity-20 mr-4">[{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span> 
-               {line}
-             </div>
-           ))}
-           {state.isAttacking && !state.blockedIps.includes(ATTACKER_IP) && (
-             <div className="flex items-center gap-2 text-indigo-400 font-bold mt-2">
-               <span>root@kali:~#</span>
-               <motion.div 
-                 animate={{ opacity: [1, 0] }}
-                 transition={{ repeat: Infinity, duration: 0.8 }}
-                 className="w-2 h-4 bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"
-               />
-             </div>
-           )}
-           {state.blockedIps.includes(ATTACKER_IP) && (
-             <div className="mt-8 p-6 rounded-2xl bg-rose-500/5 border border-rose-500/20 flex flex-col items-center text-center max-w-md mx-auto">
-                <ShieldOff className="w-12 h-12 text-rose-500/30 mb-4" />
-                <h3 className="text-rose-500 font-black text-xl uppercase tracking-tighter mb-2">ACCESS TERMINATED</h3>
-                <p className="text-rose-400/60 text-xs font-mono leading-relaxed px-4">Remote target has identified malicious fingerprint from {ATTACKER_IP}. Kill chain broken by SOC firewall.</p>
-             </div>
-           )}
+        {/* Terminal Output Area */}
+        <div className="flex-1 min-h-0 relative">
+          {/* Scanlines Effect */}
+          <div className="absolute inset-0 terminal-scanlines opacity-20 pointer-events-none" />
+          
+          <div 
+            ref={scrollRef}
+            className="absolute inset-0 p-8 font-mono text-sm overflow-auto custom-scrollbar selection:bg-indigo-500/30"
+          >
+            {terminal.map((line, i) => (
+              <div key={i} className="mb-1 text-slate-300 leading-relaxed font-medium">
+                <span className="opacity-10 mr-4 text-[10px] select-none">[{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span> 
+                <span dangerouslySetInnerHTML={{ __html: line }} />
+              </div>
+            ))}
+            
+            {!state.blockedIps.includes(ATTACKER_IP) ? (
+              <form onSubmit={handleCommand} className="flex items-center gap-2 mt-4 group">
+                  <span className="text-indigo-400 font-bold shrink-0">root@kali<span className="text-white">:~#</span></span>
+                  <div className="relative flex-1">
+                    <input 
+                      ref={inputRef}
+                      autoFocus
+                      type="text" 
+                      value={cmd}
+                      onChange={e => setCmd(e.target.value)}
+                      onBlur={() => setTimeout(() => inputRef.current?.focus(), 10)}
+                      className="bg-transparent border-none outline-none text-slate-200 w-full caret-transparent placeholder:opacity-20"
+                      placeholder="Enter exploitation command..."
+                    />
+                    {/* Custom Cursor */}
+                    <div 
+                      className="absolute left-0 top-0 bottom-0 pointer-events-none flex items-center"
+                      style={{ transform: `translateX(${cmd.length}ch)` }}
+                    >
+                      <div className="w-2.5 h-5 bg-indigo-500/80 cursor-blink shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+                    </div>
+                  </div>
+              </form>
+            ) : (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="mt-12 p-10 rounded-3xl bg-rose-500/5 border-2 border-rose-500/20 flex flex-col items-center text-center max-w-lg mx-auto relative overflow-hidden"
+              >
+                <div className="absolute top-0 left-0 w-full h-1 bg-rose-500" />
+                <ShieldOff className="w-20 h-20 text-rose-500/40 mb-6 drop-shadow-[0_0_15px_rgba(244,63,94,0.3)]" />
+                <h3 className="text-rose-500 font-black text-3xl uppercase tracking-tighter mb-4 terminal-glow">ACCESS_REVOKED</h3>
+                <p className="text-rose-400/70 text-sm font-mono leading-relaxed px-4">
+                  SIEM Automated Response: <br />
+                  Malicious signature detected from {ATTACKER_IP}. <br />
+                  Node blacklisted globally via Enterprise Firewall.
+                </p>
+                <div className="mt-8 flex gap-4">
+                   <div className="text-[10px] font-black text-rose-500/50 uppercase tracking-widest border border-rose-500/20 px-4 py-2 rounded">
+                      Connection Status: BLOCKED
+                   </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Bottom Info Bar */}
+      <div className="mt-5 flex items-center justify-between px-2">
+        <div className="flex gap-4">
+          <div className="flex flex-col">
+            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-0.5">Active Target</span>
+            <span className="text-xs font-bold text-indigo-400/80">{VICTIM_IP}</span>
+          </div>
+          <div className="w-px h-6 bg-white/5 self-center" />
+          <div className="flex flex-col">
+            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-0.5">Environment</span>
+            <span className="text-xs font-bold text-emerald-400/80">Sandboxed Workshop v1.2</span>
+          </div>
+        </div>
+        
+        <div className="flex gap-3">
+           <button 
+             onClick={() => setTerminal([...terminal, '<span class="text-indigo-400 font-bold">INFO:</span> Scanning for automated patches... Done.'])}
+             className="px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-black text-slate-400 transition-colors uppercase tracking-widest"
+           >
+             System Check
+           </button>
+           <button 
+             onClick={() => setTerminal(['<span class="text-indigo-400 font-bold">TERMINAL_WIPE:</span> Resetting console environment...'])}
+             className="px-4 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-[10px] font-black text-rose-400 transition-colors uppercase tracking-widest"
+           >
+             Hard Reset
+           </button>
         </div>
       </div>
     </motion.div>
@@ -686,6 +937,153 @@ const AttackerView = ({ state, updateState, addLog }: any) => {
 };
 
 // --- Main Layout ---
+
+const AssessmentView = () => {
+  const [currentQ, setCurrentQ] = useState(0);
+  const [score, setScore] = useState(0);
+  const [showResult, setShowResult] = useState(false);
+  const [selected, setSelected] = useState<number | null>(null);
+
+  const questions = [
+    {
+      q: "In a SOC environment, what is the 'True Positive' rate primarily measuring?",
+      o: ["Frequency of successful login attempts", "Accuracy of alert detection for real threats", "Number of logs cleared by administrators", "Latency in firewall packet processing"],
+      a: 1
+    },
+    {
+      q: "Hydra brute-force attack timing-ah block panna best SOC defense strategy edhu?",
+      o: ["Reset server every 10 minutes", "Implement Account Lockout & Rate Limiting", "Delete the admin account", "Disable Port 443"],
+      a: 1
+    },
+    {
+      q: "What does the 'S' stand for in SIEM, and what is its core role?",
+      o: ["Secure - Encrypting all incoming traffic", "Security - Real-time monitoring and event correlation", "Storage - Long term log archival", "System - Managing OS updates"],
+      a: 1
+    },
+    {
+      q: "Nmap scan results-la Port 80 'Filtered' nu vandha what does it usually mean?",
+      o: ["Target is offline", "Service is running on Port 8080", "A Firewall is blocking the probe", "The port is wide open"],
+      a: 2
+    },
+    {
+      q: "Incident Response Lifecycle-la 'Containment' appuram vara phase edhu?",
+      o: ["Preparation", "Detection", "Eradication", "Exfiltration"],
+      a: 2
+    },
+    {
+      q: "A sequence of failed login attempts from 50 different IPs targeting one user is called?",
+      o: ["Brute Force", "Credential Stuffing", "Password Spraying", "SQL Injection"],
+      a: 2
+    },
+    {
+      q: "WAF (Web Application Firewall) logs-la '<script>alert(1)</script>' kanda what is the attack?",
+      o: ["XSS (Cross-Site Scripting)", "SQLi", "DDoS", "Buffer Overflow"],
+      a: 0
+    },
+    {
+      q: "SOC Analyst rule: Log severity 'Critical' level alert vandha immediate action enna?",
+      o: ["Ignore - it's likely a false positive", "Wait for boss to arrive", "Triage, Validate, and Contain", "Send a generic email to everyone"],
+      a: 2
+    },
+    {
+      q: "What is the 'False Negative' scenario in SOC?",
+      o: ["Alert triggered for a valid user action", "Real exploit happens but NO alert is triggered", "System crashes during a scan", "User enters wrong password"],
+      a: 1
+    },
+    {
+      q: "Which protocol is usually exploited in a 'SYN Flood' attack?",
+      o: ["UDP", "ICMP", "TCP", "HTTP"],
+      a: 2
+    }
+  ];
+
+  const handleNext = () => {
+    if (selected === questions[currentQ].a) setScore(score + 1);
+    
+    if (currentQ < questions.length - 1) {
+      setCurrentQ(currentQ + 1);
+      setSelected(null);
+    } else {
+      setShowResult(true);
+    }
+  };
+
+  if (showResult) {
+    return (
+      <div className="h-full flex items-center justify-center p-8 bg-slate-950">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="max-w-xl w-full bg-slate-900 border border-indigo-500/30 rounded-[3rem] p-12 text-center"
+        >
+          <Award className="w-20 h-20 text-indigo-400 mx-auto mb-6" />
+          <h2 className="text-3xl font-black text-white uppercase tracking-tighter mb-2">Assessment Results</h2>
+          <p className="text-slate-400 font-mono mb-8 uppercase tracking-widest">Score: {score} / 10</p>
+          <div className="bg-indigo-500/10 border border-indigo-500/20 p-6 rounded-2xl mb-8">
+            <p className="text-sm text-indigo-300 font-medium leading-relaxed">
+              {score >= 8 ? "Excellent! You are ready for SOC Tier 1 role." : "Good try, but analyze the lab logs again to understand the concepts better."}
+            </p>
+          </div>
+          <button onClick={() => { setCurrentQ(0); setScore(0); setShowResult(false); }} className="px-8 py-4 bg-indigo-600 rounded-2xl text-xs font-black uppercase tracking-[0.2em] text-white">Retake Test</button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full max-w-4xl mx-auto p-12 overflow-auto custom-scrollbar">
+      <div className="mb-12">
+        <h2 className="text-xs font-black text-indigo-400 uppercase tracking-[0.4em] mb-4">Final Certification Theory</h2>
+        <h1 className="text-4xl font-black text-white uppercase tracking-tight mb-2">SOC Advanced Assessment</h1>
+        <p className="text-slate-400 font-medium">Verify your understanding of the EV Cyber Lab concepts.</p>
+      </div>
+
+      <div className="space-y-8">
+        <div className="bg-slate-900 rounded-3xl border border-slate-800 p-10 shadow-2xl">
+          <div className="flex items-center gap-4 mb-8">
+            <span className="text-[10px] font-black bg-indigo-600 px-3 py-1 rounded text-white uppercase">Question {currentQ + 1}</span>
+            <div className="h-0.5 flex-1 bg-slate-800 rounded-full overflow-hidden">
+               <div className="h-full bg-indigo-500 transition-all" style={{ width: `${(currentQ / questions.length) * 100}%` }} />
+            </div>
+          </div>
+          <h3 className="text-xl font-bold text-white mb-10 leading-snug">{questions[currentQ].q}</h3>
+          
+          <div className="grid grid-cols-1 gap-4">
+            {questions[currentQ].o.map((opt, idx) => (
+              <button
+                key={idx}
+                onClick={() => setSelected(idx)}
+                className={cn(
+                  "w-full text-left p-6 rounded-2xl border-2 transition-all flex items-center justify-between group",
+                  selected === idx 
+                    ? "bg-indigo-600 border-indigo-500 text-white shadow-lg" 
+                    : "bg-slate-800/40 border-slate-700/50 text-slate-400 hover:bg-slate-800 hover:border-slate-600"
+                )}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn("w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-xs uppercase", selected === idx ? "border-white bg-white/20" : "border-slate-700 bg-slate-900")}>
+                    {String.fromCharCode(65 + idx)}
+                  </div>
+                  <span className="font-semibold text-sm">{opt}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center px-4">
+          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Select the most accurate response.</p>
+          <button 
+            disabled={selected === null}
+            onClick={handleNext}
+            className="px-10 py-5 bg-indigo-600 disabled:opacity-30 hover:bg-indigo-500 text-white rounded-3xl text-sm font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-3 shadow-xl shadow-indigo-600/20"
+          >
+            {currentQ === questions.length - 1 ? "Finish Assessment" : "Next Question"} <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const MainLayout = ({ children, state, activeTaskId, setActiveTaskId, reset }: any) => {
   const [showBriefing, setShowBriefing] = useState(() => !localStorage.getItem('ev_briefing_seen'));
@@ -700,6 +1098,7 @@ const MainLayout = ({ children, state, activeTaskId, setActiveTaskId, reset }: a
     { name: 'SOC Dashboard', path: '/', icon: LayoutDashboard, external: false },
     { name: 'Victim System', path: '/victim', icon: Monitor, external: true },
     { name: 'Attacker Console', path: '/attacker', icon: TerminalIcon, external: true },
+    { name: 'Theory Test', path: '/assessment', icon: BookOpen, external: false },
   ];
 
   return (
@@ -713,6 +1112,17 @@ const MainLayout = ({ children, state, activeTaskId, setActiveTaskId, reset }: a
           <div>
             <h1 className="font-bold text-slate-100 text-lg leading-tight uppercase tracking-wider">EV CYBER LABS</h1>
             <p className="text-xs text-indigo-400 font-mono font-bold">CROSS-TAB SIM v1.2</p>
+          </div>
+        </div>
+
+        {/* Student Profile Card */}
+        <div className="mx-4 mt-6 p-4 bg-indigo-500/5 border border-indigo-500/10 rounded-2xl flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)]">
+            <User className="w-5 h-5 text-indigo-400" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Authenticated Analyst</span>
+            <span className="text-xs font-bold text-white truncate uppercase tracking-tight">{state.studentName || 'Student_User'}</span>
           </div>
         </div>
 
@@ -883,16 +1293,21 @@ const MainLayout = ({ children, state, activeTaskId, setActiveTaskId, reset }: a
 // --- App Root ---
 
 export default function App() {
-  const { state, updateState, addLog, reset } = useSimulation();
+  const { state, updateState, addLog, reset, isAuthenticated, studentName, login } = useSimulation();
   const [activeTaskId, setActiveTaskId] = useState(LAB_TASKS[0].id);
+
+  if (!isAuthenticated) {
+    return <AccessGate onLogin={login} />;
+  }
 
   return (
     <BrowserRouter>
-      <MainLayout state={state} activeTaskId={activeTaskId} setActiveTaskId={setActiveTaskId} reset={reset}>
+      <MainLayout state={{ ...state, studentName }} activeTaskId={activeTaskId} setActiveTaskId={setActiveTaskId} reset={reset}>
         <Routes>
           <Route path="/" element={<DashboardView state={state} addLog={addLog} updateState={updateState} activeTaskId={activeTaskId} setActiveTaskId={setActiveTaskId} />} />
           <Route path="/victim" element={<VictimView addLog={addLog} />} />
           <Route path="/attacker" element={<AttackerView state={state} updateState={updateState} addLog={addLog} />} />
+          <Route path="/assessment" element={<AssessmentView />} />
         </Routes>
       </MainLayout>
     </BrowserRouter>

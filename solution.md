@@ -28,21 +28,23 @@ This document contains the step-by-step solutions for the tasks in the SOC Simul
 
 ---
 
-### Task 3: Initiate Brute-Force
-**Target:** simulate an external threat.
+### Task 3: Manual Brute-Force (Hydra)
+**Target:** simulate an external threat via command line.
 **Action:**
 1. Open the **Attacker Console** (main dashboard or new tab).
-2. Click the **"Start Brute-Force Script"** button.
-3. Observe the red terminal lines showing `[FAIL]` attempts.
+2. Terminal input field-la indha command type pannu:
+   `hydra -l admin -P passlist.txt 192.168.1.45`
+3. Enter key press pannu.
+4. Logic: Attack start aagy constant-ah constant failures `192.168.1.45`-ku poga aarambikum.
 
 ---
 
-### Task 4: Identify Abnormal Pattern
+### Task 4: Identify Attacker IP
 **Target:** identify the source of the attack.
 **Analysis:**
-1. Navigate to the **SOC Dashboard**.
-2. Observe the rapid burst of `LOGIN_FAILURE` entries.
-3. The Source IP associated with these failures is different from the user IP.
+1. **SOC Dashboard**-ku poga.
+2. Continuous-ah varra `LOGIN_FAILURE` logs-ah monitor pannu.
+3. Attacker-oda IP 103.45.21.9 check pannu.
 4. **Answer to submit (Attacker IP):** `103.45.21.9`
 
 ---

@@ -1,6 +1,6 @@
 {
-  "name": "EV CYBER LABS: Network Security & SOC v1.0",
-  "description": "Professional-grade SOC simulation and network security lab for cybersec training.",
+  "name": "EV CYBER ACADEMY NETWORK SEC & SOC LAB",
+  "description": "Professional-grade SOC simulation and network security lab for cybersec training featuring multi-tab cross-simulation.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }
