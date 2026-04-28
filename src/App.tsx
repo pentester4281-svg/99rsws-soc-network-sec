@@ -194,13 +194,16 @@ const broadcast = new BroadcastChannel(SYNC_CHANNEL);
 
 // --- Components ---
 
-const TaskCard = ({ task, isActive, isCompleted, onSelect, index }: { 
-  task: LabTask, 
-  isActive: boolean, 
-  isCompleted: boolean, 
-  onSelect: () => void,
-  index: number
-}) => (
+interface TaskCardProps {
+  task: LabTask;
+  isActive: boolean;
+  isCompleted: boolean;
+  onSelect: () => void;
+  index: number;
+  key?: string | number;
+}
+
+const TaskCard = ({ task, isActive, isCompleted, onSelect, index }: TaskCardProps) => (
   <button
     onClick={onSelect}
     className={cn(
@@ -568,7 +571,7 @@ const VictimView = ({ addLog }: any) => {
 };
 
 const AttackerView = ({ state, updateState, addLog }: any) => {
-  const [terminal, setTerminal] = useState<string[]>(['$ msfconsole initialized...', '$ ready for payload injection...']);
+  const [terminal, setTerminal] = useState<string[]>(['Kali GNU/Linux Rolling 2024.1', 'root@kali:~# msfconsole -q', 'msf6 > ready for payload injection...']);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -576,7 +579,7 @@ const AttackerView = ({ state, updateState, addLog }: any) => {
       interval = setInterval(() => {
         const password = ['12345', 'admin', 'god', 'qwerty', 'root'][Math.floor(Math.random() * 5)];
         addLog(ATTACKER_IP, 'LOGIN_FAILURE', `Attempted credentials: admin / ${password}`, 'warning');
-        setTerminal(prev => [...prev, `[FAIL] Credential Spray: admin:${password} to ${VICTIM_IP}`].slice(-12));
+        setTerminal(prev => [...prev, `[FAIL] Credential Spray: admin:${password} to ${VICTIM_IP}`].slice(-15));
       }, 900);
     }
     return () => clearInterval(interval);
@@ -584,69 +587,96 @@ const AttackerView = ({ state, updateState, addLog }: any) => {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       className="h-full flex flex-col p-8 bg-slate-950"
     >
-      <div className="bg-slate-900 rounded-3xl border border-slate-800 p-12 flex-1 shadow-2xl flex flex-col relative overflow-hidden">
+      <div className="bg-[#0c0c0c] rounded-3xl border border-white/5 flex-1 shadow-2xl flex flex-col relative overflow-hidden ring-1 ring-white/10">
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#f43f5e 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
         
-        <div className="flex items-center justify-between mb-8">
+        {/* Terminal Title Bar */}
+        <div className="bg-[#1e1e1e] px-6 py-3 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-rose-500/10 rounded-xl flex items-center justify-center border border-rose-500/20 shadow-lg shadow-rose-500/10">
-              <Skull className="w-6 h-6 text-rose-500" />
-            </div>
-            <div>
-              <h2 className="text-xl font-black text-slate-100 uppercase tracking-tighter">OFFENSIVE SECURITY CONSOLE</h2>
-              <p className="text-xs text-rose-500 font-mono font-bold tracking-widest animate-pulse">SESSION_STATUS: {state.isAttacking ? 'ACTIVE_EXPLOIT' : 'IDLE'}</p>
-            </div>
+             <div className="flex gap-2">
+               <div className="w-3 h-3 rounded-full bg-rose-500/80 shadow-[0_0_8px_rgba(244,63,94,0.3)]" />
+               <div className="w-3 h-3 rounded-full bg-amber-500/80 shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+               <div className="w-3 h-3 rounded-full bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.3)]" />
+             </div>
+             <div className="h-4 w-px bg-white/10 mx-2" />
+             <div className="flex items-center gap-2">
+               <Skull className="w-3.5 h-3.5 text-rose-500" />
+               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">root@kali: ~</span>
+             </div>
+          </div>
+          <div className="flex gap-4">
+             <div className="flex items-center gap-2">
+               <div className={cn("w-1.5 h-1.5 rounded-full", state.isAttacking ? "bg-rose-500 animate-pulse" : "bg-slate-600")} />
+               <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest font-mono">ATTACK_MODE: {state.isAttacking ? 'SPOOFING' : 'IDLE'}</span>
+             </div>
+          </div>
+        </div>
+
+        {/* Action Bar */}
+        <div className="p-8 flex items-center justify-between bg-[#141414]/90 border-b border-white/5">
+          <div className="flex flex-col">
+            <h2 className="text-xl font-black text-white uppercase tracking-tighter">NetExploit Framework v4.2</h2>
+            <p className="text-[10px] font-bold text-rose-500 font-mono tracking-widest mt-1">SPOOFED_IP: {ATTACKER_IP}</p>
           </div>
           <div className="flex gap-3">
             <button 
             onClick={() => {
               if (state.blockedIps.includes(ATTACKER_IP)) {
-                alert('CRITICAL ERROR: IP ' + ATTACKER_IP + ' has been blacklisted by the target SIEM.');
+                setTerminal(prev => [...prev, 'root@kali:~# error: connection_denied', '[-] Target SIEM has blocked our ingress.']);
                 return;
               }
               updateState({ isAttacking: true });
-              setTerminal(prev => [...prev, '$ module login_spray --start', '$ load payloads/common.txt', '$ targeting victim asset...']);
+              setTerminal(prev => [...prev, 'root@kali:~# ./exploit.sh --target 192.168.1.45', '[+] Starting login_spray module...', '[+] Payload loaded: common_pass.txt']);
             }}
-            className="bg-rose-600 hover:bg-rose-500 text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-lg shadow-rose-500/20 active:scale-95 transition-all"
+            className="bg-rose-600 hover:bg-rose-500 text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-600/20 active:scale-95 transition-all"
             >
-              Start Brute-Force Script
+              Start Exploit
             </button>
             <button 
             onClick={() => {
               updateState({ isAttacking: false });
-              setTerminal(prev => [...prev, '$ module stop', '$ cleaning traces...']);
+              setTerminal(prev => [...prev, 'root@kali:~# killall netexploit', '[*] Exploit process killed.']);
             }}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-400 px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] active:scale-95 transition-all"
+            className="bg-white/5 hover:bg-white/10 text-slate-400 px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
             >
               Kill Process
             </button>
           </div>
         </div>
 
-        <div className="flex-1 bg-black rounded-2xl border border-slate-800 p-8 font-mono text-sm overflow-auto shadow-inner custom-scrollbar">
+        {/* Terminal Output */}
+        <div className="flex-1 bg-black p-8 font-mono text-sm overflow-auto custom-scrollbar selection:bg-rose-500/30">
            {terminal.map((line, i) => (
-             <div key={i} className={cn("mb-1", line.includes('[FAIL]') ? 'text-rose-500/80' : 'text-emerald-500/80')}>
-               <span className="opacity-30 mr-3">[{new Date().toLocaleTimeString()}]</span> {line}
+             <div key={i} className={cn(
+               "mb-1.5", 
+               line.startsWith('root@kali') ? 'text-indigo-400 font-bold' : 
+               line.includes('[FAIL]') ? 'text-rose-500/80' : 
+               line.includes('[+]') ? 'text-emerald-500/80' :
+               'text-slate-300'
+             )}>
+               <span className="opacity-20 mr-4">[{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span> 
+               {line}
              </div>
            ))}
            {state.isAttacking && !state.blockedIps.includes(ATTACKER_IP) && (
-             <motion.div 
-               animate={{ opacity: [1, 0] }}
-               transition={{ repeat: Infinity, duration: 0.8 }}
-               className="w-2 h-4 bg-emerald-500 inline-block align-middle ml-1"
-             />
+             <div className="flex items-center gap-2 text-indigo-400 font-bold mt-2">
+               <span>root@kali:~#</span>
+               <motion.div 
+                 animate={{ opacity: [1, 0] }}
+                 transition={{ repeat: Infinity, duration: 0.8 }}
+                 className="w-2 h-4 bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"
+               />
+             </div>
            )}
            {state.blockedIps.includes(ATTACKER_IP) && (
-             <div className="text-rose-500 font-bold border-2 border-rose-500/30 p-8 rounded-2xl mt-8 bg-rose-500/10 flex items-center gap-6 justify-center text-center flex-col">
-                <ShieldOff className="w-16 h-16 opacity-50" />
-                <div>
-                  <h3 className="text-xl font-black mb-2 uppercase">CONNECTION TERMINATED</h3>
-                  <p className="text-sm opacity-70">Target system is no longer reachable from this IP.</p>
-                </div>
+             <div className="mt-8 p-6 rounded-2xl bg-rose-500/5 border border-rose-500/20 flex flex-col items-center text-center max-w-md mx-auto">
+                <ShieldOff className="w-12 h-12 text-rose-500/30 mb-4" />
+                <h3 className="text-rose-500 font-black text-xl uppercase tracking-tighter mb-2">ACCESS TERMINATED</h3>
+                <p className="text-rose-400/60 text-xs font-mono leading-relaxed px-4">Remote target has identified malicious fingerprint from {ATTACKER_IP}. Kill chain broken by SOC firewall.</p>
              </div>
            )}
         </div>
@@ -667,15 +697,15 @@ const MainLayout = ({ children, state, activeTaskId, setActiveTaskId, reset }: a
   };
 
   const navItems = [
-    { name: 'SOC Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Victim System', path: '/victim', icon: Monitor },
-    { name: 'Attacker Console', path: '/attacker', icon: TerminalIcon },
+    { name: 'SOC Dashboard', path: '/', icon: LayoutDashboard, external: false },
+    { name: 'Victim System', path: '/victim', icon: Monitor, external: true },
+    { name: 'Attacker Console', path: '/attacker', icon: TerminalIcon, external: true },
   ];
 
   return (
     <div className="flex h-screen bg-slate-950 text-slate-200 font-sans selection:bg-indigo-500/30 overflow-hidden">
       
-      <aside className="w-80 bg-slate-900 border-r border-slate-800 flex flex-col h-screen shrink-0 relative z-20">
+      <aside className="w-80 bg-slate-900 border-r border-slate-800 flex flex-col h-screen shrink-0 relative z-20 font-sans">
         <div className="p-6 border-b border-slate-800 flex items-center gap-3">
           <div className="p-2 bg-indigo-500/20 rounded-lg">
             <Shield className="w-6 h-6 text-indigo-400" />
@@ -701,7 +731,7 @@ const MainLayout = ({ children, state, activeTaskId, setActiveTaskId, reset }: a
         </nav>
 
         <div className="p-4 border-t border-slate-800 space-y-4">
-          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700 font-sans">
             <div className="flex justify-between items-center mb-2">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Mastery</span>
               <span className="text-xs font-mono text-emerald-400">{Math.round((state.completedTasks.length / LAB_TASKS.length) * 100)}%</span>
@@ -716,7 +746,7 @@ const MainLayout = ({ children, state, activeTaskId, setActiveTaskId, reset }: a
           </div>
           <button 
             onClick={reset}
-            className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-bold text-slate-500 hover:text-rose-400 transition-colors uppercase tracking-widest"
+            className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-bold text-slate-500 hover:text-rose-400 transition-colors uppercase tracking-widest font-sans"
           >
             <RefreshCcw className="w-3 h-3" /> Reset Full Environment
           </button>
@@ -728,24 +758,30 @@ const MainLayout = ({ children, state, activeTaskId, setActiveTaskId, reset }: a
           <div className="flex items-center gap-2 bg-slate-800/50 p-1 rounded-2xl border border-slate-700">
             {navItems.map((item) => (
               <div key={item.path} className="flex items-center group">
-                <Link 
-                  to={item.path}
-                  className={cn(
-                    "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
-                    location.pathname === item.path ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-slate-400 hover:text-slate-200"
-                  )}
-                >
-                  <item.icon className="w-3.5 h-3.5" /> {item.name}
-                </Link>
-                <a 
-                  href={item.path}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 text-slate-600 hover:text-indigo-400 transition-colors opacity-0 group-hover:opacity-100"
-                  title="Open in new tab"
-                >
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+                {item.external ? (
+                  <a 
+                    href={item.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
+                      location.pathname === item.path ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-slate-400 hover:text-slate-200"
+                    )}
+                  >
+                    <item.icon className="w-3.5 h-3.5" /> {item.name}
+                    <ExternalLink className="w-3 h-3 ml-1 opacity-50" />
+                  </a>
+                ) : (
+                  <Link 
+                    to={item.path}
+                    className={cn(
+                      "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
+                      location.pathname === item.path ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-slate-400 hover:text-slate-200"
+                    )}
+                  >
+                    <item.icon className="w-3.5 h-3.5" /> {item.name}
+                  </Link>
+                )}
               </div>
             ))}
           </div>
