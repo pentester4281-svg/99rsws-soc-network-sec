@@ -70,6 +70,8 @@ interface LogEntry {
   action: string;
   payload: string;
   status: LogStatus;
+  userAgent?: string;
+  protocol?: string;
 }
 
 interface LabTask {
@@ -98,8 +100,8 @@ const VICTIM_IP = '192.168.1.45';
 const USER_IP = '45.122.1.22';
 
 const INITIAL_LOGS: LogEntry[] = [
-  { id: 'start-1', timestamp: new Date().toLocaleTimeString(), sourceIp: '127.0.0.1', action: 'SYSTEM_START', payload: 'SOC Kernel Simulation Initialized', status: 'info' },
-  { id: 'start-2', timestamp: new Date().toLocaleTimeString(), sourceIp: '192.168.1.1', action: 'FIREWALL_UP', payload: 'Ruleset v4.2 applied', status: 'success' },
+  { id: 'start-1', timestamp: new Date().toLocaleTimeString(), sourceIp: '127.0.0.1', action: 'SYSTEM_START', payload: 'SOC Kernel Simulation Initialized', status: 'info', userAgent: 'SystemInternal/v1.0', protocol: 'KERNEL' },
+  { id: 'start-2', timestamp: new Date().toLocaleTimeString(), sourceIp: '192.168.1.1', action: 'FIREWALL_UP', payload: 'Ruleset v4.2 applied', status: 'success', userAgent: 'iptables/v1.8.7', protocol: 'NETLINK' },
 ];
 
 const LAB_TASKS: LabTask[] = [
@@ -312,7 +314,7 @@ const useSimulation = () => {
     };
   }, []);
 
-  const addLog = useCallback((ip: string, action: string, payload: string, status: LogStatus) => {
+  const addLog = useCallback((ip: string, action: string, payload: string, status: LogStatus, userAgent?: string, protocol?: string) => {
     setState(prev => {
       const newLog: LogEntry = {
         id: Math.random().toString(36).substr(2, 9),
@@ -320,7 +322,9 @@ const useSimulation = () => {
         sourceIp: ip,
         action,
         payload,
-        status
+        status,
+        userAgent: userAgent || 'N/A',
+        protocol: protocol || 'TCP'
       };
       const newLogs = [newLog, ...prev.logs].slice(0, 50);
       const newState = { ...prev, logs: newLogs };
@@ -489,9 +493,9 @@ const DashboardView = ({ state, addLog, updateState, activeTaskId, setActiveTask
               <thead className="sticky top-0 bg-slate-900 border-b border-slate-800 z-10">
                 <tr>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">IP Source</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Origin / Protocol</th>
                   <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Action</th>
-                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Detail</th>
+                  <th className="px-6 py-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Detailed Fingerprint</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/50">
@@ -508,12 +512,26 @@ const DashboardView = ({ state, addLog, updateState, activeTaskId, setActiveTask
                         {log.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs text-indigo-300">{log.sourceIp}</td>
-                    <td className="px-6 py-4 font-bold text-[11px] tracking-tight text-slate-200">{log.action}</td>
                     <td className="px-6 py-4">
-                      <span className="text-xs text-slate-500 font-mono italic truncate max-w-[250px] block group-hover:text-slate-300">
-                        {log.payload}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="font-mono text-xs text-indigo-300">{log.sourceIp}</span>
+                        <span className="text-[9px] font-bold text-slate-600 uppercase mt-0.5">{log.protocol}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-[11px] tracking-tight text-slate-200">{log.action}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col max-w-[300px]">
+                        <span className="text-xs text-slate-400 font-mono italic truncate group-hover:text-slate-200">
+                          {log.payload}
+                        </span>
+                        <span className="text-[9px] text-slate-600 truncate mt-1 group-hover:text-indigo-400/50">
+                          UA: {log.userAgent}
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -588,7 +606,7 @@ const DashboardView = ({ state, addLog, updateState, activeTaskId, setActiveTask
                       const el = document.getElementById('block-ip-input') as HTMLInputElement;
                       if (el.value) {
                         updateState({ blockedIps: [...state.blockedIps, el.value] });
-                        addLog('127.0.0.1', 'FIREWALL_BLOCK', `IP ${el.value} blacklisted`, 'critical');
+                        addLog('127.0.0.1', 'FIREWALL_BLOCK', `IP ${el.value} blacklisted`, 'critical', 'SIEM_Orchestrator/v1.0', 'NETCONF');
                         el.value = '';
                       }
                     }}
@@ -646,10 +664,10 @@ const VictimView = ({ addLog }: any) => {
           const u = formData.get('user') as string;
           const p = formData.get('pass') as string;
           if (u === 'admin' && p === 'password123') {
-            addLog(USER_IP, 'LOGIN_SUCCESS', `User: ${u}`, 'success');
+            addLog(USER_IP, 'LOGIN_SUCCESS', `User: ${u}`, 'success', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36', 'HTTPS/TLSv1.3');
             alert('Login Successful! Baseline Established in SIEM.');
           } else {
-            addLog(USER_IP, 'LOGIN_FAILURE', `User: ${u}`, 'warning');
+            addLog(USER_IP, 'LOGIN_FAILURE', `User: ${u}`, 'warning', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36', 'HTTPS/TLSv1.3');
             alert('Invalid Credentials.');
           }
         }} 
@@ -706,7 +724,7 @@ const AttackerView = ({ state, updateState, addLog }: any) => {
       interval = setInterval(() => {
         const passwords = ['12345', 'admin', 'god', 'qwerty', 'root', 'kali', 'security', 'password', '654321', 'welcome'];
         const password = passwords[Math.floor(Math.random() * passwords.length)];
-        addLog(ATTACKER_IP, 'LOGIN_FAILURE', `Hydra brute-force: admin / ${password}`, 'warning');
+        addLog(ATTACKER_IP, 'LOGIN_FAILURE', `Hydra brute-force: admin / ${password}`, 'warning', 'Hydra/v9.5 (Kali Linux ARM64)', 'HTTP-POST');
         setTerminal(prev => [...prev, `[FAIL] Hydra attempt [${Math.floor(Math.random() * 1000)}]: user:admin  pass:${password}  target:${VICTIM_IP}`].slice(-30));
       }, 800);
     }
@@ -738,7 +756,7 @@ const AttackerView = ({ state, updateState, addLog }: any) => {
           '|_http-title: EV CORP - Internal Portal',
           '[+] Scan complete. Vulnerable entry point found on Port 80.'
         ]);
-        addLog(ATTACKER_IP, 'RECON_SCAN', 'Syn-Scan identifying Port 80/tcp as OPEN', 'info');
+        addLog(ATTACKER_IP, 'RECON_SCAN', 'Syn-Scan identifying Port 80/tcp as OPEN', 'info', 'Nmap/v7.94 (https://nmap.org)', 'TCP/SYN');
       } else {
         setTerminal([...newLogs, '[-] usage: nmap -sV [target_ip]', 'Hint: Try scanning the target 192.168.1.45']);
       }
