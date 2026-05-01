@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
-  BrowserRouter,
+  HashRouter,
   Routes,
   Route,
   Link,
@@ -1186,30 +1186,17 @@ const MainLayout = ({ children, state, activeTaskId, setActiveTaskId, reset }: a
           <div className="flex items-center gap-2 bg-slate-800/50 p-1 rounded-2xl border border-slate-700">
             {navItems.map((item) => (
               <div key={item.path} className="flex items-center group">
-                {item.external ? (
-                  <a 
-                    href={item.path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(
-                      "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
-                      location.pathname === item.path ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-slate-400 hover:text-slate-200"
-                    )}
-                  >
-                    <item.icon className="w-3.5 h-3.5" /> {item.name}
-                    <ExternalLink className="w-3 h-3 ml-1 opacity-50" />
-                  </a>
-                ) : (
-                  <Link 
-                    to={item.path}
-                    className={cn(
-                      "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
-                      location.pathname === item.path ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-slate-400 hover:text-slate-200"
-                    )}
-                  >
-                    <item.icon className="w-3.5 h-3.5" /> {item.name}
-                  </Link>
-                )}
+                <Link 
+                  to={item.path}
+                  target={item.external ? "_blank" : "_self"}
+                  className={cn(
+                    "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
+                    location.pathname === item.path ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "text-slate-400 hover:text-slate-200"
+                  )}
+                >
+                  <item.icon className="w-3.5 h-3.5" /> {item.name}
+                  {item.external && <ExternalLink className="w-3 h-3 ml-1 opacity-50" />}
+                </Link>
               </div>
             ))}
           </div>
@@ -1319,7 +1306,7 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <MainLayout state={{ ...state, studentName }} activeTaskId={activeTaskId} setActiveTaskId={setActiveTaskId} reset={reset}>
         <Routes>
           <Route path="/" element={<DashboardView state={state} addLog={addLog} updateState={updateState} activeTaskId={activeTaskId} setActiveTaskId={setActiveTaskId} />} />
@@ -1328,6 +1315,6 @@ export default function App() {
           <Route path="/assessment" element={<AssessmentView />} />
         </Routes>
       </MainLayout>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
