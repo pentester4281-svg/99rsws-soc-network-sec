@@ -1,76 +1,36 @@
-# EV CYBER LABS - SOC Simulation v1.2 Solution Guide
+# EV CYBER ACADEMY: Lab Solutions & Walkthrough
 
-This document contains the step-by-step solutions for the tasks in the SOC Simulation lab. It is intended for instructors and students who need guidance.
+## Task 1: Baseline Establishment
+- **Target:** Login to the Victim Portal.
+- **Solution:** Navigate to `Victim System` tab. Enter `admin` / `password123`.
 
----
+## Task 2: Network Recon (Nmap)
+- **Target:** Scan the target system.
+- **Solution:** In `Attacker Console`, type `nmap -sV 192.168.1.45`.
 
-### Task 1: Normal Login Attempt
-**Target:** baseline system activity.
-**Action:** 
-1. Open the **Victim System** (main dashboard or new tab).
-2. Enter the credentials:
-   - **Username:** `admin`
-   - **Password:** `password123`
-3. Click "Authenticate".
-4. Result: "Login Successful" alert appears.
+## Task 3: Manual Brute-Force (Hydra)
+- **Target:** Initiate a brute-force attack.
+- **Solution:** In `Attacker Console`, type `hydra -l admin -P passlist.txt 192.168.1.45`.
 
----
+## Task 4: Source Attribution
+- **Target:** Identify the Attacker's IP.
+- **Solution:** Check `SOC Dashboard` logs. Look for the IP making multiple failed login attempts.
+- **Answer:** `103.45.21.9`
 
-### Task 2: SIEM Log Observation
-**Target:** verify logging mechanisms.
-**Analysis:**
-1. Navigate to the **SOC Dashboard**.
-2. Look at the top log entries.
-3. Locate the entry with:
-   - **Action:** `LOGIN_SUCCESS`
-   - **IP Source:** `45.122.1.22`
-4. **Answer to submit:** `45.122.1.22`
+## Task 5: Alert Level Logic
+- **Target:** Trigger a 'CRITICAL_BREACH' alert.
+- **Solution:** Keep the Hydra scan running until the "Alert Level" top bar turns RED and shows "BREACH" (occurs after 15 failed attempts).
 
----
+## Task 6: Incident Containment
+- **Target:** Block the offending IP.
+- **Solution:** In `SOC Dashboard`, scroll to "Defense Actions". Enter `103.45.21.9` and click "Block IP".
 
-### Task 3: Manual Brute-Force (Hydra)
-**Target:** simulate an external threat via command line.
-**Action:**
-1. Open the **Attacker Console** (main dashboard or new tab).
-2. Terminal input field-la indha command type pannu:
-   `hydra -l admin -P passlist.txt 192.168.1.45`
-3. Enter key press pannu.
-4. Logic: Attack start aagy constant-ah constant failures `192.168.1.45`-ku poga aarambikum.
+## Task 7: Advanced Forensic Fingerprinting (Hard)
+- **Target:** Extract the exact User-Agent from logs.
+- **Solution:** Look at the `Detailed Fingerprint` column in the SOC Dashboard for a `LOGIN_FAILURE` log.
+- **Answer:** `Hydra/v9.5 (Kali Linux ARM64)`
 
----
-
-### Task 4: Identify Attacker IP
-**Target:** identify the source of the attack.
-**Analysis:**
-1. **SOC Dashboard**-ku poga.
-2. Continuous-ah varra `LOGIN_FAILURE` logs-ah monitor pannu.
-3. Attacker-oda IP 103.45.21.9 check pannu.
-4. **Answer to submit (Attacker IP):** `103.45.21.9`
-
----
-
-### Task 5: Security Alert Trigger
-**Target:** monitor system health.
-**Action:**
-1. Keep the attack running.
-2. Monitor the **"Threat Status"** in the header.
-3. Once the failed attempts cross the threshold (15 attempts), the status will change to **BREACH**.
-4. **Answer to submit:** `BREACH`
-
----
-
-### Task 6: Block and Verify
-**Target:** threat containment (Incident Response).
-**Action:**
-1. In the **SOC Dashboard**, go to the **Defense Actions** panel.
-2. Input the IP: `103.45.21.9`.
-3. Click the **Block** button.
-4. **Verification:**
-   - Observe that the `LOGIN_FAILURE` logs stop appearing in the SIEM.
-   - Switch to the **Attacker Console** tab and observe the `CONNECTION_TERMINATED` message.
-   - The status in the header will reset/stabilize.
-
----
-
-### Final Outcome
-Once all tasks are verified, the **SOC Certified** award will be unlocked, indicating successful completion of the basic Incident Response lifecycle: Detection -> Analysis -> Containment -> Recovery.
+## Task 8: Reconnaissance Signature Analysis (Hard)
+- **Target:** Identify the exact Apache version from scan logs.
+- **Solution:** Look at the `Attacker Console` (Terminal) output after running the `nmap -sV` command. Locate the line: `80/tcp open http Apache 2.4.41`.
+- **Answer:** `Apache 2.4.41`

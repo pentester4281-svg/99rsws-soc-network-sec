@@ -78,7 +78,7 @@ interface LabTask {
   id: string;
   title: string;
   description: string;
-  difficulty: 'Easy' | 'Medium';
+  difficulty: 'Easy' | 'Medium' | 'Hard';
   reward: string;
   validation: (state: SimulationState, answer: string) => boolean;
   instructions: string[];
@@ -186,6 +186,35 @@ const LAB_TASKS: LabTask[] = [
     ],
     validation: (state) => state.blockedIps.includes(ATTACKER_IP),
     hint: 'Block 103.45.21.9 in the SOC dashboard.'
+  },
+  {
+    id: 'ua-fingerprint',
+    title: 'Advanced Forensic Fingerprinting',
+    description: 'Analyze the specific User-Agent string used by the brute-force tool.',
+    difficulty: 'Hard',
+    reward: 'Forensic Expert',
+    instructions: [
+      'SOC Dashboard logs-ah deep-ah analyze pannu.',
+      'Attacker IP 103.45.21.9 panna brute-force attempts-ku irrukurra "User Agent" (UA) exact-ah kandu pudinga.',
+      'Detailed Fingerprint column-la clear-ah UA value irrukkum.',
+      'Enter the EXACT User Agent string (Case Sensitive).'
+    ],
+    validation: (_, ans) => ans.trim() === 'Hydra/v9.5 (Kali Linux ARM64)',
+    hint: 'Look for the "UA:" prefix in the Detailed Fingerprint column for failed attempts.'
+  },
+  {
+    id: 'service-version',
+    title: 'Reconnaissance Signature Analysis',
+    description: 'Verify the exact software version running on the victim server from scan results.',
+    difficulty: 'Hard',
+    reward: 'Recon Architect',
+    instructions: [
+      'Attacker Console terminal-la nmap scan results-ah check pannu.',
+      'Victim system (192.168.1.45) Port 80-la enna version Apache run aagudhu?',
+      'Exact software version-ah enter pannu (Ex: Apache 2.X.XX).'
+    ],
+    validation: (_, ans) => ans.trim() === 'Apache 2.4.41',
+    hint: 'Check the Nmap output line for "80/tcp open http" and find the version code.'
   }
 ];
 
